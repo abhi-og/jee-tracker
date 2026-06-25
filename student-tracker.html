@@ -7,7 +7,7 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
   :root{
-    --bg:#121212;--bg-card:#1A1A1A;--line:rgba(255,255,255,0.09);
+    --bg:#121212;--line:rgba(255,255,255,0.09);
     --text:#F2F0EC;--text-dim:#8C8980;--text-faint:#5C5A54;
     --accent:#7FE0A8;--danger:#E27D7D;
   }
@@ -16,18 +16,16 @@
   body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
   #root{max-width:560px;margin:0 auto;padding:20px 16px 70px;}
 
-  .banner{display:flex;align-items:flex-start;gap:8px;border-radius:10px;padding:10px 14px;
-    font-size:12.5px;line-height:1.5;margin-bottom:16px;}
-  .banner.error{background:rgba(226,125,125,0.12);border:1px solid rgba(226,125,125,0.4);color:#E8B4B4;}
-  .banner.info{background:rgba(127,224,168,0.10);border:1px solid rgba(127,224,168,0.3);color:#A8E8C4;}
-
-  header.sheet-head{margin-bottom:20px;}
   .top-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
   .top-row h1{font-family:'Poppins',sans-serif;font-weight:700;font-size:22px;margin:0;color:var(--accent);}
   .role-badge{font-size:11px;background:rgba(127,224,168,0.15);color:var(--accent);
     border:1px solid rgba(127,224,168,0.35);border-radius:20px;padding:3px 10px;}
+  .sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;}
+  .sync-dot.ok{background:var(--accent);}
+  .sync-dot.err{background:var(--danger);}
+  .sync-status{font-size:11px;color:var(--text-dim);display:flex;align-items:center;margin-bottom:14px;}
 
-  .date-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .date-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
   .date-nav button{background:transparent;border:1px solid var(--line);color:var(--text-dim);
     width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;
     display:flex;align-items:center;justify-content:center;transition:all .15s ease;}
@@ -85,20 +83,18 @@
     background:var(--text);color:var(--bg);padding:8px 18px;border-radius:20px;
     font-size:12.5px;opacity:0;transition:opacity .25s ease;pointer-events:none;z-index:10;}
   .toast.show{opacity:1;}
-  .lock-screen{display:none;}
 </style>
 </head>
 <body>
 <div id="root"><div id="app"></div></div>
 <div class="toast" id="toast"></div>
 <script>
+const FIREBASE_URL = 'https://jee-tracker-95d7e-default-rtdb.asia-southeast1.firebasedatabase.app';
 const SUBJECTS = [
   { key:'physics', label:'Physics' },
   { key:'chemistry', label:'Chemistry' },
   { key:'maths', label:'Maths' }
 ];
-// Shared key prefix — both tracker & viewer use this same prefix
-const SHARED_PREFIX = 'jee_shared:';
 
 function toDateStr(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -113,81 +109,73 @@ function emptyDay(){
   return d;
 }
 
-let state={ currentDate:todayStr(), data:emptyDay(), storageOk:false };
+let state={ currentDate:todayStr(), data:emptyDay(), synced:false };
 
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),1800);
 }
+function setSyncStatus(ok){
+  state.synced=ok;
+  const el=document.getElementById('sync-status');
+  if(el) el.innerHTML=`<span class="sync-dot ${ok?'ok':'err'}"></span>${ok?'Synced ✓':'Sync error — check internet'}`;
+}
 
-// Storage: shared=true so viewer can read
-async function storeGet(key){
-  if(window.storage && typeof window.storage.get==='function'){
-    try{
-      const r=await window.storage.get(SHARED_PREFIX+key,true);
-      return r&&r.value?r.value:null;
-    }catch(e){}
-  }
-  try{ return localStorage.getItem(SHARED_PREFIX+key); }catch(e){ return null; }
+async function fbGet(dateStr){
+  try{
+    const r=await fetch(`${FIREBASE_URL}/entries/${dateStr}.json`);
+    const data=await r.json();
+    if(data){
+      const base=emptyDay();
+      return { subjects:{...base.subjects,...(data.subjects||{})}, extra:data.extra||[] };
+    }
+  }catch(e){}
+  return null;
 }
-async function storeSet(key,value){
-  if(window.storage && typeof window.storage.set==='function'){
-    try{ await window.storage.set(SHARED_PREFIX+key,value,true); return true; }catch(e){}
-  }
-  try{ localStorage.setItem(SHARED_PREFIX+key,value); return true; }catch(e){ return false; }
-}
-async function checkStorage(){
-  if(window.storage && typeof window.storage.set==='function'){
-    try{
-      await window.storage.set('__probe__','1',true);
-      const r=await window.storage.get('__probe__',true);
-      if(r&&r.value){ state.storageOk=true; return; }
-    }catch(e){}
-  }
-  try{ localStorage.setItem('__probe__','1'); state.storageOk=true; return; }catch(e){}
-  state.storageOk=false;
+async function fbSet(dateStr, data){
+  try{
+    const r=await fetch(`${FIREBASE_URL}/entries/${dateStr}.json`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(data)
+    });
+    if(r.ok){ setSyncStatus(true); return true; }
+  }catch(e){}
+  setSyncStatus(false);
+  return false;
 }
 
 async function loadDay(ds){
-  try{
-    const v=await storeGet('entry:'+ds);
-    if(v){ const p=JSON.parse(v); return { subjects:{...emptyDay().subjects,...(p.subjects||{})}, extra:p.extra||[] }; }
-  }catch(e){}
-  return emptyDay();
+  const data=await fbGet(ds);
+  return data || emptyDay();
 }
-async function saveDay(ds,data){
-  const ok=await storeSet('entry:'+ds,JSON.stringify(data));
-  if(!ok) showToast("⚠️ Save failed");
+async function saveDay(ds, data){
+  const ok=await fbSet(ds,data);
+  if(!ok) showToast("⚠️ Save failed — check internet");
+  else showToast("Saved ✓");
   return ok;
 }
 
 async function init(){
   buildShell();
-  await checkStorage();
-  document.getElementById('storage-banner').style.display = state.storageOk?'none':'flex';
   await refreshForDate();
 }
 
 function buildShell(){
   document.getElementById('app').innerHTML=`
-    <div class="banner error" id="storage-banner" style="display:none;">
-      ⚠️ Sharing won't work — open this inside Claude.ai chat as an artifact, not as a downloaded file.
+    <div class="top-row">
+      <h1>📚 JEE Tracker</h1>
+      <span class="role-badge">Student</span>
     </div>
-
-    <header class="sheet-head">
-      <div class="top-row">
-        <h1>📚 JEE Tracker</h1>
-        <span class="role-badge">Student</span>
-      </div>
-      <div class="date-row">
-        <div class="date-nav"><button id="prev-day">‹</button></div>
-        <span class="date-display" id="date-display"></span>
-        <span class="today-tag" id="today-tag" style="display:none;">Today</span>
-        <div class="date-nav"><button id="next-day">›</button></div>
-        <input type="date" id="date-input" class="date-input-hidden" max="${todayStr()}">
-      </div>
-    </header>
+    <div class="sync-status" id="sync-status"><span class="sync-dot"></span>Connecting…</div>
+    <div class="date-row">
+      <div class="date-nav"><button id="prev-day">‹</button></div>
+      <span class="date-display" id="date-display"></span>
+      <span class="today-tag" id="today-tag" style="display:none;">Today</span>
+      <div class="date-nav"><button id="next-day">›</button></div>
+      <input type="date" id="date-input" class="date-input-hidden" max="${todayStr()}">
+    </div>
     <div class="sheet-table" id="sheet-table"><div class="loading-state">Loading…</div></div>
     <div class="progress-strip">
       <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
@@ -218,6 +206,7 @@ async function refreshForDate(){
   updateHeader();
   document.getElementById('sheet-table').innerHTML='<div class="loading-state">Loading…</div>';
   state.data=await loadDay(state.currentDate);
+  setSyncStatus(true);
   renderList();
 }
 async function changeDate(d){ state.currentDate=d; await refreshForDate(); }
@@ -232,11 +221,10 @@ async function toggleSubject(key,field){
   const cb=document.querySelector(`.cell[data-subj="${key}"][data-field="${field}"] .checkbox`);
   if(cb){ cb.classList.add('pop'); setTimeout(()=>cb.classList.remove('pop'),220); }
   await saveDay(state.currentDate,state.data);
-  showToast("Saved ✓");
 }
 async function toggleExtra(id){
   const t=state.data.extra.find(x=>x.id===id); if(t) t.done=!t.done;
-  renderList(); await saveDay(state.currentDate,state.data); showToast("Saved ✓");
+  renderList(); await saveDay(state.currentDate,state.data);
 }
 async function removeExtra(id){
   state.data.extra=state.data.extra.filter(x=>x.id!==id);
@@ -254,7 +242,6 @@ function computeProgress(){
   state.data.extra.forEach(t=>{ total++; if(t.done) done++; });
   return {total,done,pct:total?Math.round((done/total)*100):0};
 }
-
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
 function renderList(){
@@ -281,15 +268,13 @@ function renderList(){
       <button class="remove-x" data-extra-remove="${t.id}">×</button></div>`;
   });
   html+=`<div class="add-task-row"><div class="plus-icon">+</div>
-    <input type="text" id="new-task-input" placeholder="Extra task add karo (Enter dabao)"></div></div>`;
+    <input type="text" id="new-task-input" placeholder="Extra task (Enter dabao)"></div></div>`;
   table.innerHTML=html;
-
   table.querySelectorAll('.cell[data-subj]').forEach(n=>n.addEventListener('click',()=>toggleSubject(n.dataset.subj,n.dataset.field)));
   table.querySelectorAll('[data-extra-check]').forEach(n=>n.addEventListener('click',()=>toggleExtra(n.dataset.extraCheck)));
   table.querySelectorAll('[data-extra-remove]').forEach(n=>n.addEventListener('click',e=>{e.stopPropagation();removeExtra(n.dataset.extraRemove);}));
   const inp=document.getElementById('new-task-input');
   if(inp) inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ addExtra(inp.value); inp.value=''; } });
-
   const p=computeProgress();
   document.getElementById('progress-fill').style.width=p.pct+'%';
   document.getElementById('progress-label').textContent=p.done+'/'+p.total+' done';
