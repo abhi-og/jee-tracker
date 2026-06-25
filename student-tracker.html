@@ -85,12 +85,50 @@
     background:var(--text);color:var(--bg);padding:8px 18px;border-radius:20px;
     font-size:12.5px;opacity:0;transition:opacity .25s ease;pointer-events:none;z-index:10;}
   .toast.show{opacity:1;}
+  .lock-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;z-index:999;padding:30px;}
+  .lock-icon{font-size:48px;margin-bottom:16px;}
+  .lock-title{font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;margin-bottom:6px;color:var(--text);}
+  .lock-sub{font-size:13px;color:var(--text-dim);margin-bottom:28px;}
+  .lock-input{width:100%;max-width:280px;background:#1E1E1E;border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px;color:var(--text);font-size:16px;
+    font-family:'Inter',sans-serif;outline:none;text-align:center;letter-spacing:2px;margin-bottom:14px;}
+  .lock-input:focus{border-color:var(--accent);}
+  .lock-btn{width:100%;max-width:280px;background:var(--accent);border:none;
+    border-radius:12px;padding:14px;color:#121212;font-size:15px;font-weight:600;
+    font-family:'Poppins',sans-serif;cursor:pointer;}
+  .lock-btn:active{opacity:0.85;}
+  .lock-error{color:var(--danger);font-size:13px;margin-top:10px;min-height:18px;}
 </style>
 </head>
 <body>
-<div id="root"><div id="app"></div></div>
+<div class="lock-screen" id="lock-screen">
+  <div class="lock-icon">🔒</div>
+  <div class="lock-title">JEE Tracker</div>
+  <div class="lock-sub">Student — password daalo</div>
+  <input class="lock-input" type="password" id="lock-input" placeholder="••••••" />
+  <button class="lock-btn" id="lock-btn">Enter</button>
+  <div class="lock-error" id="lock-error"></div>
+</div>
+<div id="root" style="display:none"><div id="app"></div></div>
 <div class="toast" id="toast"></div>
 <script>
+const CORRECT_PASSWORD = 'subhi';
+function checkPassword(){
+  const val = document.getElementById('lock-input').value;
+  if(val === CORRECT_PASSWORD){
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('root').style.display='';
+    init();
+  } else {
+    document.getElementById('lock-error').textContent='❌ Wrong password, dobara try karo';
+    document.getElementById('lock-input').value='';
+    document.getElementById('lock-input').focus();
+  }
+}
+document.getElementById('lock-btn').addEventListener('click', checkPassword);
+document.getElementById('lock-input').addEventListener('keydown', e=>{ if(e.key==='Enter') checkPassword(); });
+
 const SUBJECTS = [
   { key:'physics', label:'Physics' },
   { key:'chemistry', label:'Chemistry' },
@@ -300,7 +338,7 @@ async function resetDay(){
   await saveDay(state.currentDate,state.data); showToast("Day cleared");
 }
 
-init();
+// init() is called after password unlock only
 </script>
 </body>
 </html>
