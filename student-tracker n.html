@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>JEE Daily Sheet — Student</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+  :root{
+    --bg:#121212;--line:rgba(255,255,255,0.09);
+    --text:#F2F0EC;--text-dim:#8C8980;--text-faint:#5C5A54;
+    --accent:#7FE0A8;--danger:#E27D7D;--warn:#F2C46D;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+  #root{max-width:560px;margin:0 auto;padding:20px 16px 70px;}
+
+  .top-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .top-row h1{font-family:'Poppins',sans-serif;font-weight:700;font-size:22px;margin:0;color:var(--accent);}
+  .role-badge{font-size:11px;background:rgba(127,224,168,0.15);color:var(--accent);
+    border:1px solid rgba(127,224,168,0.35);border-radius:20px;padding:3px 10px;}
+  .sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;}
+  .sync-dot.ok{background:var(--accent);}
+  .sync-dot.err{background:var(--danger);}
+  .sync-status{font-size:11px;color:var(--text-dim);display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .settings-btn{background:none;border:none;color:var(--text-faint);font-size:14px;cursor:pointer;padding:2px 4px;}
+  .settings-btn:hover{color:var(--text);}
+
+  .date-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .date-nav button{background:transparent;border:1px solid var(--line);color:var(--text-dim);
+    width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;
+    display:flex;align-items:center;justify-content:center;transition:all .15s ease;}
+  .date-nav button:hover{border-color:var(--text);color:var(--text);}
+  .date-display{font-size:15px;color:var(--text);font-weight:500;cursor:pointer;
+    border-bottom:1px dashed var(--line);padding:2px 2px;}
+  .today-tag{font-size:11px;color:var(--accent);border:1px solid var(--accent);
+    border-radius:20px;padding:2px 9px;}
+  .date-input-hidden{position:absolute;opacity:0;pointer-events:none;width:0;height:0;}
+
+  .streak-badge{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;
+    background:rgba(242,196,109,0.12);color:var(--warn);border:1px solid rgba(242,196,109,0.35);
+    border-radius:20px;padding:3px 10px;margin-left:auto;}
+
+  /* history strip */
+  .history-strip{display:flex;gap:6px;margin-bottom:18px;overflow-x:auto;padding-bottom:2px;}
+  .history-day{flex:1;min-width:36px;text-align:center;cursor:pointer;}
+  .history-bar{height:34px;border-radius:7px;border:1px solid var(--line);display:flex;
+    align-items:center;justify-content:center;font-size:10px;color:var(--text-faint);
+    transition:all .15s ease;}
+  .history-bar.full{background:rgba(127,224,168,0.18);border-color:var(--accent);color:var(--accent);}
+  .history-bar.partial{background:rgba(242,196,109,0.14);border-color:var(--warn);color:var(--warn);}
+  .history-bar.low{background:rgba(226,125,125,0.12);border-color:var(--danger);color:var(--danger);}
+  .history-bar.empty{background:transparent;border-style:dashed;}
+  .history-bar.active{box-shadow:0 0 0 1.5px var(--text);}
+  .history-lbl{font-size:9.5px;color:var(--text-faint);margin-top:3px;}
+
+  .sheet-table{border-top:1px solid var(--line);margin-top:4px;}
+  .sheet-row{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line);}
+  .sheet-row.label-row{color:var(--text-dim);font-size:12px;text-transform:uppercase;letter-spacing:1px;padding:8px 0;}
+  .cell{display:flex;align-items:center;justify-content:space-between;padding:15px 14px;gap:10px;}
+  .cell.left{border-right:1px solid var(--line);}
+  .cell .item-label{font-size:15px;color:var(--text);transition:color .2s ease;}
+  .cell.done .item-label{color:var(--text-faint);}
+
+  .checkbox{width:24px;height:24px;border-radius:7px;border:1.6px solid var(--text-dim);
+    flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:all .15s ease;background:transparent;}
+  .checkbox:hover{border-color:var(--text);}
+  .checkbox.checked{background:var(--text);border-color:var(--text);}
+  .checkbox.checked::after{content:"";width:12px;height:9px;
+    border-left:2.4px solid var(--bg);border-bottom:2.4px solid var(--bg);
+    transform:rotate(-45deg) translate(1px,-1.5px);}
+  .checkbox.pop{animation:pop .22s ease;}
+  @keyframes pop{0%{transform:scale(0.75);}60%{transform:scale(1.18);}100%{transform:scale(1);}}
+
+  .notes-row{border-bottom:1px solid var(--line);padding:0 14px 10px;}
+  .notes-row input{width:100%;background:transparent;border:none;outline:none;
+    color:var(--text-faint);font-size:13px;font-family:'Inter',sans-serif;
+    border-bottom:1px dashed var(--line);padding:4px 0;}
+  .notes-row input:focus{color:var(--text);border-bottom-color:var(--text-dim);}
+  .notes-row input::placeholder{color:var(--text-faint);}
+
+  .extra-section{margin-top:4px;}
+  .extra-row{display:flex;align-items:center;justify-content:space-between;
+    padding:13px 14px;border-bottom:1px solid var(--line);gap:10px;}
+  .extra-row .item-label{font-size:15px;color:var(--text);flex:1;}
+  .extra-row.done .item-label{color:var(--text-faint);}
+  .remove-x{background:none;border:none;color:var(--text-faint);font-size:16px;cursor:pointer;padding:2px 4px;line-height:1;}
+  .remove-x:hover{color:var(--danger);}
+  .add-task-row{display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid var(--line);}
+  .plus-icon{width:24px;height:24px;border-radius:7px;border:1.6px dashed var(--text-faint);
+    flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:15px;}
+  .add-task-row input{flex:1;background:transparent;border:none;outline:none;
+    color:var(--text);font-size:15px;font-family:'Inter',sans-serif;}
+  .add-task-row input::placeholder{color:var(--text-faint);}
+
+  .progress-strip{margin-top:20px;display:flex;align-items:center;gap:10px;}
+  .progress-track{flex:1;height:6px;border-radius:4px;background:var(--line);overflow:hidden;}
+  .progress-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s ease;}
+  .progress-label{font-size:12px;color:var(--text-dim);white-space:nowrap;min-width:48px;text-align:right;}
+
+  /* chapters section */
+  .chapters-section{margin-top:26px;}
+  .chapters-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:10px;}
+  .chapter-subject{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;}
+  .chapter-subject-head{display:flex;align-items:center;justify-content:space-between;
+    padding:13px 14px;cursor:pointer;background:#161616;}
+  .chapter-subject-head .csh-name{font-size:14.5px;font-weight:500;}
+  .chapter-subject-head .csh-count{font-size:12.5px;color:var(--accent);font-family:'Inter',sans-serif;}
+  .chapter-list{display:none;}
+  .chapter-list.open{display:block;}
+  .chapter-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--line);}
+  .chapter-item .checkbox{width:20px;height:20px;border-radius:6px;}
+  .chapter-item .checkbox.checked::after{width:10px;height:7px;}
+  .chapter-item .ch-name{font-size:13.5px;color:var(--text);}
+  .chapter-item.done .ch-name{color:var(--text-faint);}
+  .chapter-toggle-icon{font-size:11px;color:var(--text-faint);transition:transform .2s ease;}
+  .chapter-toggle-icon.open{transform:rotate(180deg);}
+
+  .footer-actions{display:flex;justify-content:center;margin-top:22px;}
+  .reset-btn{background:none;border:none;color:var(--text-faint);font-size:12.5px;cursor:pointer;text-decoration:underline;}
+  .reset-btn:hover{color:var(--danger);}
+
+  .loading-state{text-align:center;padding:60px 20px;color:var(--text-dim);font-size:13px;}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--text);color:var(--bg);padding:8px 18px;border-radius:20px;
+    font-size:12.5px;opacity:0;transition:opacity .25s ease;pointer-events:none;z-index:10;}
+  .toast.show{opacity:1;}
+
+  /* settings panel */
+  .settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:50;
+    display:flex;align-items:center;justify-content:center;padding:24px;}
+  .settings-panel{background:#1A1A1A;border:1px solid var(--line);border-radius:14px;
+    padding:20px;width:100%;max-width:320px;}
+  .settings-panel h3{margin:0 0 14px;font-family:'Poppins',sans-serif;font-size:16px;color:var(--text);}
+  .settings-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .settings-row label{font-size:13.5px;color:var(--text-dim);}
+  .settings-row input{width:64px;background:#121212;border:1px solid var(--line);border-radius:8px;
+    color:var(--text);padding:6px 8px;font-family:'Inter',sans-serif;font-size:14px;text-align:center;}
+  .settings-actions{display:flex;gap:8px;margin-top:16px;}
+  .settings-actions button{flex:1;padding:10px;border-radius:8px;border:none;font-size:13.5px;
+    font-family:'Inter',sans-serif;cursor:pointer;}
+  .settings-save{background:var(--accent);color:#121212;font-weight:600;}
+  .settings-cancel{background:transparent;border:1px solid var(--line) !important;color:var(--text-dim);}
+
+  .countdown-banner{background:rgba(242,196,109,0.1);border:1px solid rgba(242,196,109,0.3);
+    border-radius:12px;padding:10px 14px;font-size:13px;color:var(--warn);text-align:center;margin-bottom:14px;}
+  .countdown-banner b{font-size:16px;}
+
+  .view-tabs{display:flex;gap:6px;margin-bottom:10px;}
+  .view-tab{background:transparent;border:1px solid var(--line);color:var(--text-dim);
+    padding:5px 14px;border-radius:20px;font-size:12.5px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .view-tab.active{background:var(--accent);color:#121212;border-color:var(--accent);font-weight:600;}
+
+  .month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .month-nav button{background:transparent;border:1px solid var(--line);color:var(--text-dim);
+    width:28px;height:28px;border-radius:50%;cursor:pointer;}
+  .month-label{font-size:14px;font-weight:500;}
+  .month-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;
+    font-size:10.5px;color:var(--text-faint);margin-bottom:4px;}
+  .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:18px;}
+  .month-cell{aspect-ratio:1;border-radius:6px;border:1px solid var(--line);display:flex;
+    align-items:center;justify-content:center;font-size:11px;color:var(--text-faint);cursor:pointer;}
+  .month-cell.empty{border:none;cursor:default;}
+  .month-cell.full{background:rgba(127,224,168,0.18);border-color:var(--accent);color:var(--accent);}
+  .month-cell.partial{background:rgba(242,196,109,0.14);border-color:var(--warn);color:var(--warn);}
+  .month-cell.low{background:rgba(226,125,125,0.12);border-color:var(--danger);color:var(--danger);}
+  .month-cell.active{box-shadow:0 0 0 1.5px var(--text);}
+
+  .pace-card{background:#1A1A1A;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-top:20px;}
+  .pace-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:10px;}
+  .pace-row{display:flex;justify-content:space-between;font-size:13px;color:var(--text-dim);padding:4px 0;}
+  .pace-row b{color:var(--text);font-family:'Inter',sans-serif;}
+  .pace-status{margin-top:10px;text-align:center;font-size:13.5px;font-weight:600;padding:8px;border-radius:8px;}
+  .pace-status.good{background:rgba(127,224,168,0.12);color:var(--accent);}
+  .pace-status.bad{background:rgba(226,125,125,0.12);color:var(--danger);}
+  .pace-empty{font-size:12.5px;color:var(--text-faint);text-align:center;padding:6px;}
+
+  .settings-row.full{flex-direction:column;align-items:flex-start;gap:6px;}
+  .settings-row.full input{width:100%;text-align:left;}
+
+  /* Lock Screen */
+  .lock-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;z-index:100;padding:32px;}
+  .lock-icon{font-size:48px;margin-bottom:16px;}
+  .lock-title{font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;color:var(--accent);margin-bottom:4px;}
+  .lock-sub{font-size:13px;color:var(--text-dim);margin-bottom:32px;}
+  .lock-input-wrap{width:100%;max-width:280px;position:relative;}
+  .lock-input{width:100%;background:#1A1A1A;border:1.5px solid var(--line);border-radius:12px;
+    padding:14px 48px 14px 18px;font-size:16px;color:var(--text);font-family:'Inter',sans-serif;
+    outline:none;transition:border-color .2s ease;letter-spacing:2px;}
+  .lock-input:focus{border-color:var(--accent);}
+  .lock-input.error{border-color:var(--danger);animation:shake .3s ease;}
+  .lock-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);
+    background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:18px;padding:2px;}
+  .lock-btn{width:100%;max-width:280px;margin-top:14px;padding:14px;
+    background:var(--accent);border:none;border-radius:12px;
+    font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;
+    color:#121212;cursor:pointer;transition:opacity .15s ease;}
+  .lock-btn:hover{opacity:0.88;}
+  .lock-error{font-size:13px;color:var(--danger);margin-top:10px;min-height:18px;text-align:center;}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}
+</style>
+</head>
+<body>
+<div id="root"><div id="app"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const FIREBASE_URL = 'https://jee-tracker-95d7e-default-rtdb.asia-southeast1.firebasedatabase.app';
+const SUBJECTS = [
+  { key:'physics', label:'Physics' },
+  { key:'chemistry', label:'Chemistry' },
+  { key:'maths', label:'Maths' }
+];
+const CHAPTERS = {
+  physics: [
+    // Class 11
+    "Units & Measurements","Motion in a Straight Line","Motion in a Plane","Laws of Motion","Work, Energy & Power","System of Particles & Rotational Motion","Gravitation","Mechanical Properties of Solids","Mechanical Properties of Fluids","Thermal Properties of Matter","Thermodynamics","Kinetic Theory of Gases","Oscillations","Waves",
+    // Class 12
+    "Electric Charges & Fields","Electrostatic Potential & Capacitance","Current Electricity","Moving Charges & Magnetism","Magnetism & Matter","Electromagnetic Induction","Alternating Current","Electromagnetic Waves","Ray Optics & Optical Instruments","Wave Optics","Dual Nature of Radiation & Matter","Atoms","Nuclei","Semiconductor Electronics: Materials, Devices & Simple Circuits"
+  ],
+  chemistry: [
+    // Class 11
+    "Some Basic Concepts of Chemistry","Structure of Atom","Classification of Elements & Periodicity in Properties","Chemical Bonding & Molecular Structure","States of Matter","Thermodynamics","Equilibrium","Redox Reactions","Hydrogen","The s-Block Elements","Some p-Block Elements","Organic Chemistry – Some Basic Principles and Techniques","Hydrocarbons","Environmental Chemistry",
+    // Class 12
+    "The Solid State","Solutions","Electrochemistry","Chemical Kinetics","Surface Chemistry","The p-Block Elements","The d- and f-Block Elements","Coordination Compounds","Haloalkanes and Haloarenes","Alcohols, Phenols and Ethers","Aldehydes, Ketones and Carboxylic Acids","Amines","Biomolecules","Polymers","Chemistry in Everyday Life"
+  ],
+  maths: [
+    // Class 11
+    "Sets, Relations & Functions","Trigonometry","Complex Numbers","Quadratic Equations","Permutations & Combinations (P & C)","Binomial Theorem","Sequences & Series","Straight Lines","Conic Sections","Limits & Derivatives","Introduction to 3-D Geometry","Statistics","Probability",
+    // Class 12
+    "Relations & Functions","Inverse Trigonometric Functions","Matrices","Determinants","Continuity & Differentiability","Application of Derivatives","Integrals","Differential Equations","Vector Algebra","3D Geometry","Probability","Linear Programming"
+  ]
+};
+const DEFAULT_TARGETS = { physics:20, chemistry:20, maths:20 };
+
+function toDateStr(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function todayStr(){ return toDateStr(new Date()); }
+function fmtDateLabel(ds){
+  return new Date(ds+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+}
+function fmtShort(ds){
+  return new Date(ds+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short'});
+}
+function emptyDay(){
+  const d={subjects:{},extra:[]};
+  SUBJECTS.forEach(s=>{ d.subjects[s.key]={lecture:false,questions:false,notes:''}; });
+  return d;
+}
+
+let state={ currentDate:todayStr(), data:emptyDay(), targets:{...DEFAULT_TARGETS}, chapters:{}, synced:false, streak:0, examDate:null, activeView:'week', monthCursor:todayStr() };
+
+function isChapterDone(entry){
+  return entry === true || (entry && typeof entry==='object' && entry.done === true);
+}
+function chapterCompletedAt(entry){
+  if(entry && typeof entry==='object' && entry.completedAt) return entry.completedAt;
+  return null;
+}
+function daysUntilExam(){
+  if(!state.examDate) return null;
+  const today = new Date(todayStr()+'T00:00:00');
+  const exam = new Date(state.examDate+'T00:00:00');
+  return Math.round((exam - today) / (1000*60*60*24));
+}
+function computeChaptersStats(){
+  let total=0, done=0, doneWithDates=[];
+  SUBJECTS.forEach(s=>{
+    const list = CHAPTERS[s.key];
+    const map = state.chapters[s.key] || {};
+    total += list.length;
+    list.forEach(c=>{
+      const entry = map[c];
+      if(isChapterDone(entry)){
+        done++;
+        const dt = chapterCompletedAt(entry);
+        if(dt) doneWithDates.push(dt);
+      }
+    });
+  });
+  return { total, done, remaining: total-done, doneWithDates };
+}
+function computeRecentVelocity(doneWithDates, windowDays){
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-windowDays);
+  const cutoffStr = toDateStr(cutoff);
+  const recentCount = doneWithDates.filter(dt => dt >= cutoffStr).length;
+  return recentCount / windowDays;
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1800);
+}
+function setSyncStatus(ok){
+  state.synced=ok;
+  const el=document.getElementById('sync-status-dot-wrap');
+  if(el) el.innerHTML=`<span class="sync-dot ${ok?'ok':'err'}"></span>${ok?'Synced ✓':'Sync error'}`;
+}
+
+async function fbGetPath(path){
+  try{
+    const r=await fetch(`${FIREBASE_URL}/${path}.json`);
+    return await r.json();
+  }catch(e){ return null; }
+}
+async function fbSetPath(path,data){
+  try{
+    const r=await fetch(`${FIREBASE_URL}/${path}.json`,{
+      method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)
+    });
+    if(r.ok){ setSyncStatus(true); return true; }
+  }catch(e){}
+  setSyncStatus(false);
+  return false;
+}
+
+async function fbGet(dateStr){
+  const data = await fbGetPath('entries/'+dateStr);
+  if(data){
+    const base=emptyDay();
+    const subj={};
+    SUBJECTS.forEach(s=>{ subj[s.key] = { ...base.subjects[s.key], ...(data.subjects && data.subjects[s.key] || {}) }; });
+    return { subjects:subj, extra:data.extra||[] };
+  }
+  return null;
+}
+async function fbSet(dateStr,data){ return fbSetPath('entries/'+dateStr, data); }
+
+function progressOf(data){
+  let total=0,done=0;
+  SUBJECTS.forEach(s=>{ total+=2; if(data.subjects[s.key].lecture) done++; if(data.subjects[s.key].questions) done++; });
+  (data.extra||[]).forEach(t=>{ total++; if(t.done) done++; });
+  return { total, done, pct: total?Math.round((done/total)*100):0 };
+}
+
+async function loadDay(ds){
+  const data=await fbGet(ds);
+  setSyncStatus(true);
+  return data || emptyDay();
+}
+async function saveDay(ds,data){ return await fbSet(ds,data); }
+
+async function loadTargets(){
+  const t = await fbGetPath('settings/targets');
+  return t ? {...DEFAULT_TARGETS, ...t} : {...DEFAULT_TARGETS};
+}
+async function saveTargets(t){ return await fbSetPath('settings/targets', t); }
+
+async function loadChapters(){
+  const c = await fbGetPath('chapters');
+  const result = {};
+  SUBJECTS.forEach(s=>{ result[s.key] = (c && c[s.key]) || {}; });
+  return result;
+}
+async function toggleChapter(subjectKey, chapterName){
+  const current = state.chapters[subjectKey][chapterName];
+  const wasDone = isChapterDone(current);
+  state.chapters[subjectKey][chapterName] = wasDone
+    ? { done:false, completedAt:null }
+    : { done:true, completedAt: todayStr() };
+  renderChapters();
+  await fbSetPath('chapters/'+subjectKey, state.chapters[subjectKey]);
+  renderPaceTracker();
+}
+
+async function computeStreak(){
+  let d = new Date();
+  const todayData = await fbGet(todayStr());
+  const todayPct = todayData ? progressOf(todayData).pct : 0;
+  if(todayPct < 100){ d.setDate(d.getDate()-1); }
+  let streak = 0;
+  for(let i=0;i<45;i++){
+    const ds = toDateStr(d);
+    const data = await fbGet(ds);
+    if(!data) break;
+    if(progressOf(data).pct < 100) break;
+    streak++;
+    d.setDate(d.getDate()-1);
+  }
+  return streak;
+}
+
+async function loadHistoryStrip(centerDate){
+  const dates = [];
+  const d = new Date(centerDate+'T00:00:00');
+  d.setDate(d.getDate()-6);
+  for(let i=0;i<7;i++){ dates.push(toDateStr(d)); d.setDate(d.getDate()+1); }
+  const results = await Promise.all(dates.map(async ds => {
+    const data = await fbGet(ds);
+    return { date: ds, data, pct: data ? progressOf(data).pct : null };
+  }));
+  return results;
+}
+
+async function init(){
+  buildShell();
+  state.targets = await loadTargets();
+  state.examDate = await fbGetPath('settings/examDate');
+  state.chapters = await loadChapters();
+  renderChapters();
+  renderCountdown();
+  renderPaceTracker();
+  await refreshForDate();
+  state.streak = await computeStreak();
+  renderStreak();
+}
+
+function buildShell(){
+  document.getElementById('app').innerHTML=`
+    <div class="top-row">
+      <h1>📋 JEE Daily Sheet</h1>
+      <span class="role-badge">Student</span>
+    </div>
+    <div class="sync-status">
+      <span id="sync-status-dot-wrap"><span class="sync-dot"></span>Connecting…</span>
+      <button class="settings-btn" id="settings-btn" title="Edit daily targets">⚙ Targets</button>
+    </div>
+    <div class="countdown-banner" id="countdown-banner"></div>
+    <div class="date-row">
+      <div class="date-nav"><button id="prev-day">‹</button></div>
+      <span class="date-display" id="date-display"></span>
+      <span class="today-tag" id="today-tag" style="display:none;">Aaj</span>
+      <div class="date-nav"><button id="next-day">›</button></div>
+      <input type="date" id="date-input" class="date-input-hidden" max="${todayStr()}">
+      <span class="streak-badge" id="streak-badge" style="display:none;"></span>
+    </div>
+    <div class="view-tabs">
+      <button class="view-tab active" data-view="week" id="tab-week">Week</button>
+      <button class="view-tab" data-view="month" id="tab-month">Month</button>
+    </div>
+    <div class="history-strip" id="history-strip"></div>
+    <div id="month-view" style="display:none;"></div>
+    <div class="sheet-table" id="sheet-table"><div class="loading-state">Loading…</div></div>
+    <div class="progress-strip">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-label" id="progress-label"></div>
+    </div>
+    <div class="pace-card" id="pace-tracker"></div>
+    <div class="chapters-section">
+      <div class="chapters-title">Chapters Complete (overall, not per-day)</div>
+      <div id="chapters-container"></div>
+    </div>
+    <div class="footer-actions">
+      <button class="reset-btn" id="reset-btn">Clear this day</button>
+    </div>
+  `;
+  document.getElementById('prev-day').onclick=()=>shiftDate(-1);
+  document.getElementById('next-day').onclick=()=>shiftDate(1);
+  document.getElementById('date-display').onclick=()=>{
+    const i=document.getElementById('date-input');
+    try{ i.showPicker(); }catch(e){ i.click(); }
+  };
+  document.getElementById('date-input').onchange=e=>{ if(e.target.value) changeDate(e.target.value); };
+  document.getElementById('reset-btn').onclick=resetDay;
+  document.getElementById('settings-btn').onclick=openSettings;
+  document.getElementById('tab-week').onclick=()=>setView('week');
+  document.getElementById('tab-month').onclick=()=>setView('month');
+}
+
+function renderStreak(){
+  const el = document.getElementById('streak-badge');
+  if(!el) return;
+  if(state.streak > 0){
+    el.style.display='inline-flex';
+    el.innerHTML = `🔥 ${state.streak} din streak`;
+  } else {
+    el.style.display='none';
+  }
+}
+
+function updateHeader(){
+  const isToday=state.currentDate===todayStr();
+  document.getElementById('date-display').textContent=fmtDateLabel(state.currentDate);
+  document.getElementById('today-tag').style.display=isToday?'':'none';
+  document.getElementById('date-input').value=state.currentDate;
+}
+
+async function renderHistoryStrip(){
+  const el = document.getElementById('history-strip');
+  if(!el) return;
+  const days = await loadHistoryStrip(state.currentDate);
+  el.innerHTML = days.map(d=>{
+    let cls='empty', label='–';
+    if(d.pct !== null){
+      label = d.pct+'%';
+      cls = d.pct>=80?'full':(d.pct>0?'partial':'low');
+    }
+    const active = d.date===state.currentDate ? 'active' : '';
+    return `<div class="history-day" data-date="${d.date}">
+      <div class="history-bar ${cls} ${active}">${label}</div>
+      <div class="history-lbl">${fmtShort(d.date)}</div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.history-day').forEach(n=>{
+    n.addEventListener('click', ()=>changeDate(n.dataset.date));
+  });
+}
+
+async function refreshForDate(){
+  updateHeader();
+  document.getElementById('sheet-table').innerHTML='<div class="loading-state">Loading…</div>';
+  state.data=await loadDay(state.currentDate);
+  renderList();
+  await renderHistoryStrip();
+}
+async function changeDate(d){ state.currentDate=d; await refreshForDate(); }
+function shiftDate(delta){
+  const d=new Date(state.currentDate+'T00:00:00'); d.setDate(d.getDate()+delta);
+  changeDate(toDateStr(d));
+}
+
+async function toggleSubject(key,field){
+  state.data.subjects[key][field]=!state.data.subjects[key][field];
+  renderList();
+  const cb=document.querySelector(`.cell[data-subj="${key}"][data-field="${field}"] .checkbox`);
+  if(cb){ cb.classList.add('pop'); setTimeout(()=>cb.classList.remove('pop'),220); }
+  await saveDay(state.currentDate,state.data);
+  if(state.currentDate===todayStr()){ state.streak = await computeStreak(); renderStreak(); }
+}
+async function updateNotes(key,value){
+  state.data.subjects[key].notes = value;
+  await saveDay(state.currentDate,state.data);
+}
+async function toggleExtra(id){
+  const t=state.data.extra.find(x=>x.id===id); if(t) t.done=!t.done;
+  renderList(); await saveDay(state.currentDate,state.data);
+}
+async function removeExtra(id){
+  state.data.extra=state.data.extra.filter(x=>x.id!==id);
+  renderList(); await saveDay(state.currentDate,state.data);
+}
+async function addExtra(text){
+  if(!text.trim()) return;
+  state.data.extra.push({id:'x'+Date.now(),text:text.trim(),done:false});
+  renderList(); await saveDay(state.currentDate,state.data);
+}
+
+function computeProgress(){ return progressOf(state.data); }
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+function renderList(){
+  const table=document.getElementById('sheet-table'); if(!table) return;
+  let html=`<div class="sheet-row label-row">
+    <div class="cell left" style="padding:6px 14px;">Subject</div>
+    <div class="cell" style="padding:6px 14px;">Today's task</div></div>`;
+  SUBJECTS.forEach(s=>{
+    const sub=state.data.subjects[s.key];
+    const target = state.targets[s.key] || 20;
+    html+=`<div class="sheet-row">
+      <div class="cell left ${sub.lecture?'done':''}" data-subj="${s.key}" data-field="lecture">
+        <span class="item-label">${s.label} lecture</span>
+        <div class="checkbox ${sub.lecture?'checked':''}"></div></div>
+      <div class="cell ${sub.questions?'done':''}" data-subj="${s.key}" data-field="questions">
+        <span class="item-label">${s.label} ${target} Qs</span>
+        <div class="checkbox ${sub.questions?'checked':''}"></div></div>
+    </div>
+    <div class="notes-row">
+      <input type="text" data-notes="${s.key}" placeholder="${s.label}: koi mistake/note? (optional)" value="${esc(sub.notes||'')}">
+    </div>`;
+  });
+  html+=`<div class="extra-section">`;
+  state.data.extra.forEach(t=>{
+    html+=`<div class="extra-row ${t.done?'done':''}" data-extra="${t.id}">
+      <div class="checkbox ${t.done?'checked':''}" data-extra-check="${t.id}"></div>
+      <span class="item-label">${esc(t.text)}</span>
+      <button class="remove-x" data-extra-remove="${t.id}">×</button></div>`;
+  });
+  html+=`<div class="add-task-row"><div class="plus-icon">+</div>
+    <input type="text" id="new-task-input" placeholder="Extra task (Enter dabao)"></div></div>`;
+  table.innerHTML=html;
+  table.querySelectorAll('.cell[data-subj]').forEach(n=>n.addEventListener('click',()=>toggleSubject(n.dataset.subj,n.dataset.field)));
+  table.querySelectorAll('[data-extra-check]').forEach(n=>n.addEventListener('click',()=>toggleExtra(n.dataset.extraCheck)));
+  table.querySelectorAll('[data-extra-remove]').forEach(n=>n.addEventListener('click',e=>{e.stopPropagation();removeExtra(n.dataset.extraRemove);}));
+  table.querySelectorAll('[data-notes]').forEach(n=>{
+    n.addEventListener('blur', ()=>updateNotes(n.dataset.notes, n.value));
+    n.addEventListener('keydown', e=>{ if(e.key==='Enter'){ n.blur(); } });
+  });
+  const inp=document.getElementById('new-task-input');
+  if(inp) inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ addExtra(inp.value); inp.value=''; } });
+  const p=computeProgress();
+  document.getElementById('progress-fill').style.width=p.pct+'%';
+  document.getElementById('progress-label').textContent=p.done+'/'+p.total+' done';
+}
+
+function renderChapters(){
+  const container = document.getElementById('chapters-container');
+  if(!container) return;
+  container.innerHTML = SUBJECTS.map(s=>{
+    const chapList = CHAPTERS[s.key];
+    const doneMap = state.chapters[s.key] || {};
+    const doneCount = chapList.filter(c=>isChapterDone(doneMap[c])).length;
+    const isOpen = container.dataset[s.key+'open'] === '1';
+    return `<div class="chapter-subject">
+      <div class="chapter-subject-head" data-toggle-subject="${s.key}">
+        <span class="csh-name">${s.label}</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span class="csh-count">${doneCount}/${chapList.length}</span>
+          <span class="chapter-toggle-icon ${isOpen?'open':''}">▾</span>
+        </span>
+      </div>
+      <div class="chapter-list ${isOpen?'open':''}" id="chlist-${s.key}">
+        ${chapList.map(c=>{
+          const done = isChapterDone(doneMap[c]);
+          return `
+          <div class="chapter-item ${done?'done':''}" data-chapter-subj="${s.key}" data-chapter-name="${esc(c)}">
+            <div class="checkbox ${done?'checked':''}"></div>
+            <span class="ch-name">${esc(c)}</span>
+          </div>
+        `;}).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('[data-toggle-subject]').forEach(n=>{
+    n.addEventListener('click', ()=>{
+      const key = n.dataset.toggleSubject;
+      const flagKey = key+'open';
+      container.dataset[flagKey] = container.dataset[flagKey]==='1' ? '0' : '1';
+      renderChapters();
+    });
+  });
+  container.querySelectorAll('[data-chapter-subj]').forEach(n=>{
+    n.addEventListener('click', ()=>toggleChapter(n.dataset.chapterSubj, n.dataset.chapterName));
+  });
+}
+
+function renderCountdown(){
+  const el = document.getElementById('countdown-banner');
+  if(!el) return;
+  const daysLeft = daysUntilExam();
+  if(daysLeft === null){
+    el.innerHTML = `🎯 Exam date set nahi hai — ⚙ Targets mein set karo`;
+  } else if(daysLeft > 0){
+    el.innerHTML = `🎯 JEE: <b>${daysLeft}</b> din baaki`;
+  } else if(daysLeft === 0){
+    el.innerHTML = `🎯 Exam aaj hai — all the best! 🍀`;
+  } else {
+    el.innerHTML = `Exam ho gaya — results ke liye all the best! 🤞`;
+  }
+}
+
+function renderPaceTracker(){
+  const el = document.getElementById('pace-tracker');
+  if(!el) return;
+  const stats = computeChaptersStats();
+  const daysLeft = daysUntilExam();
+  if(daysLeft === null){
+    el.innerHTML = `<div class="pace-title">Pace Tracker</div>
+      <div class="pace-empty">⚙ Settings mein exam date set karo — tab pace calculate hoga.</div>`;
+    return;
+  }
+  if(stats.remaining === 0){
+    el.innerHTML = `<div class="pace-title">Pace Tracker</div>
+      <div class="pace-status good">✅ Saare chapters complete!</div>`;
+    return;
+  }
+  if(daysLeft <= 0){
+    el.innerHTML = `<div class="pace-title">Pace Tracker</div>
+      <div class="pace-empty">Exam date nikal gayi.</div>`;
+    return;
+  }
+  const requiredPerDay = stats.remaining / daysLeft;
+  const actualPerDay = computeRecentVelocity(stats.doneWithDates, 14);
+  const onTrack = actualPerDay >= requiredPerDay;
+  el.innerHTML = `
+    <div class="pace-title">Pace Tracker</div>
+    <div class="pace-row"><span>Chapters bache</span><b>${stats.remaining}/${stats.total}</b></div>
+    <div class="pace-row"><span>Din bache</span><b>${daysLeft}</b></div>
+    <div class="pace-status ${onTrack?'good':'bad'}">${onTrack ? '✅ On track ho' : '⚠️ Thoda peeche ho — speed badhao'}</div>
+  `;
+}
+
+async function loadMonthData(anyDateInMonth){
+  const d = new Date(anyDateInMonth+'T00:00:00');
+  const year = d.getFullYear(), month = d.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const dates = [];
+  for(let i=1;i<=daysInMonth;i++){ dates.push(toDateStr(new Date(year,month,i))); }
+  const results = await Promise.all(dates.map(async ds=>{
+    const data = await fbGet(ds);
+    return { date: ds, pct: data ? progressOf(data).pct : null };
+  }));
+  return { year, month, firstDayWeekday: firstDay.getDay(), daysInMonth, results };
+}
+
+async function renderMonthView(){
+  const el = document.getElementById('month-view');
+  if(!el) return;
+  el.innerHTML = '<div class="loading-state">Loading…</div>';
+  const m = await loadMonthData(state.monthCursor);
+  const monthName = new Date(m.year, m.month, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  let cellsHtml = '';
+  for(let i=0;i<m.firstDayWeekday;i++){ cellsHtml += `<div class="month-cell empty"></div>`; }
+  m.results.forEach(r=>{
+    let cls='empty';
+    if(r.pct!==null){ cls = r.pct>=80?'full':(r.pct>0?'partial':'low'); }
+    const active = r.date===state.currentDate?'active':'';
+    const dayNum = parseInt(r.date.slice(-2),10);
+    cellsHtml += `<div class="month-cell ${cls} ${active}" data-date="${r.date}">${dayNum}</div>`;
+  });
+  el.innerHTML = `
+    <div class="month-nav">
+      <button id="month-prev">‹</button>
+      <span class="month-label">${monthName}</span>
+      <button id="month-next">›</button>
+    </div>
+    <div class="month-weekdays">${['S','M','T','W','T','F','S'].map(x=>`<div>${x}</div>`).join('')}</div>
+    <div class="month-grid">${cellsHtml}</div>
+  `;
+  document.getElementById('month-prev').onclick=()=>{
+    const d = new Date(state.monthCursor+'T00:00:00'); d.setMonth(d.getMonth()-1,1);
+    state.monthCursor = toDateStr(d); renderMonthView();
+  };
+  document.getElementById('month-next').onclick=()=>{
+    const d = new Date(state.monthCursor+'T00:00:00'); d.setMonth(d.getMonth()+1,1);
+    state.monthCursor = toDateStr(d); renderMonthView();
+  };
+  el.querySelectorAll('.month-cell[data-date]').forEach(n=>{
+    n.addEventListener('click', ()=>{ setView('week'); changeDate(n.dataset.date); });
+  });
+}
+
+function setView(view){
+  state.activeView = view;
+  document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active', t.dataset.view===view));
+  const hs = document.getElementById('history-strip');
+  const mv = document.getElementById('month-view');
+  if(hs) hs.style.display = view==='week' ? 'flex' : 'none';
+  if(mv) mv.style.display = view==='month' ? 'block' : 'none';
+  if(view==='month'){ state.monthCursor = state.currentDate; renderMonthView(); }
+}
+
+function openSettings(){
+  const overlay = document.createElement('div');
+  overlay.className = 'settings-overlay';
+  overlay.id = 'settings-overlay';
+  overlay.innerHTML = `
+    <div class="settings-panel">
+      <h3>Settings</h3>
+      <div class="settings-row full">
+        <label>🎯 JEE exam date</label>
+        <input type="date" id="exam-date-input" value="${state.examDate||''}">
+      </div>
+      <div style="height:10px;"></div>
+      <h3 style="font-size:13px;color:var(--text-dim);">Daily question targets</h3>
+      ${SUBJECTS.map(s=>`
+        <div class="settings-row">
+          <label>${s.label}</label>
+          <input type="number" min="1" max="200" id="target-${s.key}" value="${state.targets[s.key]||20}">
+        </div>
+      `).join('')}
+      <div class="settings-actions">
+        <button class="settings-cancel" id="settings-cancel">Cancel</button>
+        <button class="settings-save" id="settings-save">Save</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('settings-cancel').onclick = ()=>overlay.remove();
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+  document.getElementById('settings-save').onclick = async ()=>{
+    const newTargets = {};
+    SUBJECTS.forEach(s=>{
+      const v = parseInt(document.getElementById('target-'+s.key).value, 10);
+      newTargets[s.key] = (isNaN(v) || v<1) ? (state.targets[s.key]||20) : v;
+    });
+    state.targets = newTargets;
+    await saveTargets(newTargets);
+    const examVal = document.getElementById('exam-date-input').value;
+    state.examDate = examVal || null;
+    await fbSetPath('settings/examDate', state.examDate);
+    overlay.remove();
+    renderList();
+    renderCountdown();
+    renderPaceTracker();
+    showToast("Settings updated");
+  };
+}
+
+async function resetDay(){
+  if(!confirm("Is din ke saare ticks clear karein?")) return;
+  state.data=emptyDay(); renderList();
+  await saveDay(state.currentDate,state.data); showToast("Day cleared");
+  await renderHistoryStrip();
+}
+
+/* ── Lock Screen ── */
+const CORRECT_PASSWORD = 'subhi';
+const SESSION_KEY = 'jee_student_auth';
+
+function isAuthenticated(){
+  return sessionStorage.getItem(SESSION_KEY) === '1';
+}
+
+function showLockScreen(){
+  const lock = document.createElement('div');
+  lock.className = 'lock-screen';
+  lock.id = 'lock-screen';
+  lock.innerHTML = `
+    <div class="lock-icon">🔒</div>
+    <div class="lock-title">JEE Tracker</div>
+    <div class="lock-sub">Student login &bull; Password daalo</div>
+    <div class="lock-input-wrap">
+      <input class="lock-input" id="lock-input" type="password" placeholder="Password" autocomplete="off">
+      <button class="lock-eye" id="lock-eye" tabindex="-1">👁</button>
+    </div>
+    <button class="lock-btn" id="lock-btn">Enter ➜</button>
+    <div class="lock-error" id="lock-error"></div>
+  `;
+  document.body.appendChild(lock);
+  setTimeout(()=>document.getElementById('lock-input').focus(), 100);
+
+  const input = document.getElementById('lock-input');
+  const btn = document.getElementById('lock-btn');
+  const eye = document.getElementById('lock-eye');
+  const errEl = document.getElementById('lock-error');
+
+  eye.onclick = () => {
+    input.type = input.type === 'password' ? 'text' : 'password';
+  };
+
+  function tryUnlock(){
+    if(input.value.trim().toLowerCase() === CORRECT_PASSWORD){
+      sessionStorage.setItem(SESSION_KEY, '1');
+      lock.style.opacity = '0';
+      lock.style.transition = 'opacity .3s ease';
+      setTimeout(() => lock.remove(), 300);
+      init();
+    } else {
+      input.classList.add('error');
+      errEl.textContent = 'Galat password — dobara try karo';
+      setTimeout(() => input.classList.remove('error'), 400);
+      input.value = '';
+      input.focus();
+    }
+  }
+
+  btn.onclick = tryUnlock;
+  input.addEventListener('keydown', e => { if(e.key === 'Enter') tryUnlock(); });
+}
+
+if(isAuthenticated()){
+  init();
+} else {
+  showLockScreen();
+}
+</script>
+</body>
+</html>
